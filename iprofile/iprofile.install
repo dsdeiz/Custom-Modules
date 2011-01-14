@@ -1,0 +1,43 @@
+<?php
+/**
+ * @file
+ * Define schema, install schema, and uninstall schema file.
+ */
+
+
+function iprofile_schema() {
+  $schema['iprofile'] = array(
+    'description' => t('Table for the Iprofile module'),
+    'fields' => array(
+      'iprofile_id' => array(
+        'description' => t('The primary identifier for the Iprofile module.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => t('The user id.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'ip_addr' => array(
+        'description' => t('The ip address assigned to the user.'),
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('iprofile_id'),
+  );
+
+  return $schema;
+}
+
+function iprofile_install() {
+  drupal_install_schema('iprofile');
+}
+
+function iprofile_uninstall() {
+  drupal_uninstall_schema('iprofile');
+}

@@ -1,0 +1,108 @@
+<?php
+/**
+ * Implementation of hook_perm()
+ */
+function iprofile_perm() {
+  return array('access iprofile');
+}
+
+/**
+ * Implementation of hook_form_alter()
+ */
+function iprofile_form_alter(&$form, $form_state, $form_id) {
+  switch ($form_id) {
+    case 'user_login':
+      array_unshift($form['#validate'], 'iprofile_check_ip');
+      break;
+    case 'user_login_block':
+      array_unshift($form['#validate'], 'iprofile_check_ip');
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_user()
+ */
+function iprofile_user($op, &$edit, &$account, $category = NULL) {
+  if ($op == 'load') {
+    $result = db_query("SELECT ip_addr FROM {iprofile} WHERE uid = %d ORDER BY iprofile_id ASC", $account->uid);
+    $count = 0;
+
+    while ($row = db_fetch_object($result)) {
+      $account->ip_addr[$count] = $row->ip_addr;
+      $count++;
+    }
+  }
+
+  if ($op == 'form' && $category == 'account' && user_access('access iprofile')) {
+    $form['iprofile'] = array(
+      '#type' => 'fieldset',
+      '#title' => check_plain("IP Profile"),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#weight' => 7,
+    );
+
+    $form['iprofile']['information'] = array(
+      '#value' => t('Save the changes to add more textfields.'),
+    );
+
+    $ip_count = count($edit['ip_addr']) + 3;
+
+    for ($i = 0; $i < $ip_count; $i++) {
+      $form['iprofile']['address'][$i] = array(
+        '#type' => 'textfield',
+        '#title' => t('Address @n', array('@n' => ($i + 1))),
+        '#default_value' => isset($edit['ip_addr'][$i]) ? $edit['ip_addr'][$i] : '',
+        '#parents' => array('ip_addr', $i),
+      );
+    }
+
+    return $form;
+  }
+
+  if ($op == 'validate' && $category = 'account') {
+    $ip_count = count($edit['ip_addr']);
+
+    for ($i = 0; $i < $ip_count; $i++) {
+      if (!empty($edit['ip_addr'][$i])) {
+        if (filter_var($edit['ip_addr'][$i], FILTER_VALIDATE_IP) == FALSE) {
+          form_set_error('ip_addr][' . $i, t('IP Address is not valid.'));
+        }
+      }
+    }
+  }
+
+  if ($op == 'update') {
+    // Let us rebuild the whole record for the user.
+    db_query("DELETE FROM {iprofile} WHERE uid = %d", $account->uid);
+
+    $ip_count = count($edit['ip_addr']);
+
+    for ($i = 0; $i < $ip_count; $i++) {
+      if (!empty($edit['ip_addr'][$i])) {
+         db_query("INSERT INTO {iprofile} (uid, ip_addr) VALUES (%d, '%s')", $account->uid, $edit['ip_addr'][$i]);
+      }
+    }
+
+    $edit['ip_addr'] = NULL;
+  }
+}
+
+/**
+ * Check if IP Address matches for the user.
+ */
+function iprofile_check_ip($form, &$form_state) {
+  $user_data = user_load(array('name' => $form_state['values']['name']));
+
+  // Check if there is an existing record of IP addresses for the user.
+  if (db_result(db_query("SELECT COUNT(ip_addr) FROM {iprofile} WHERE uid = %d", $user_data->uid)) > 0) {
+    // See if a record exists for current uid and ip address.
+    $ip = db_result(db_query("SELECT ip_addr FROM {iprofile} WHERE uid = %d AND ip_addr = '%s'", $user_data->uid, ip_address()));
+
+    if ($ip == FALSE) {
+      form_set_error('name', t('The IP address you are logging in does not match the IP address specified in your profile'));
+      watchdog('iprofile', 'IP address not matched for %user &mdash; %ip', array('%user' => $form_state['values']['name'], '%ip' => ip_address()));
+    }
+  }
+}

@@ -1,0 +1,5 @@
+name = Annual Reports
+description = Annual reports clone.
+package = Custom Modules
+core = 6.x
+dependencies[] = "elements"

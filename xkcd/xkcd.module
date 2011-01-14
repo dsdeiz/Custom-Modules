@@ -1,0 +1,136 @@
+<?php
+/**
+ * Implementation of hook_theme().
+ */
+function xkcd_theme($existing, $type, $theme, $path) {
+  return array(
+    'xkcd_block' => array(
+      'arguments' => array('recent' => TRUE),
+    ),
+    'psychtoons_block' => array(
+      'arguments' => array('url' => NULL, 'recent' => TRUE),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function xkcd_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks[0] = array(
+      'info' => t('xkcd Recent Comic'),
+    );
+
+    $blocks[1] = array(
+      'info' => t('xkcd Random Comic'),
+    );
+
+    $blocks[2]['info'] = t('Psychtoons Recent Comic');
+
+    $blocks[3]['info'] = t('Psychtoons Random Comic');
+
+    return $blocks;
+  }
+
+  if ($op == 'configure' && $delta == 2) {
+    $form['xml_file'] = array(
+      '#type' => 'select',
+      '#title' => 'XML file',
+      '#options' => array_values(_xkcd_list_xml_files()),
+      '#default_value' => variable_get('xkcd_xml_file_recent', 0),
+    );
+
+    return $form;
+  }
+
+  if ($op == 'save' && $delta == 2) {
+    variable_set('xkcd_xml_file_recent', $edit['xml_file']);
+  }
+
+  if ($op == 'configure' && $delta == 3) {
+    $form['xml_file'] = array(
+      '#type' => 'select',
+      '#title' => 'XML file',
+      '#options' => array_values(_xkcd_list_xml_files()),
+      '#default_value' => variable_get('xkcd_xml_file_random', 0),
+    );
+  }
+
+  if ($op == 'save' && $delta == 3) {
+    variable_set('xkcd_xml_file_random', $edit['xml_file']);
+  }
+
+  if ($op == 'view') {
+    switch ($delta) {
+      case 0:
+        $block['subject'] = t('xkcd Recent Comic');
+        $block['content'] = theme('xkcd_block');
+        break;
+      case 1:
+        $block['subject'] = t('xkcd Random Comic');
+        $block['content'] = theme('xkcd_block', FALSE);
+        break;
+      case 2:
+        $block['subject'] = t('Psychtoons Recent Comic');
+        $keys = array_keys(_xkcd_list_xml_files());
+        $block['content'] = theme('psychtoons_block', $keys[variable_get('xkcd_xml_file_recent', 0)]);
+        break;
+      case 3:
+        $block['subject'] = t('Psychtoons Random Comic');
+        $keys = array_keys(_xkcd_list_xml_files());
+        $block['content'] = theme('psychtoons_block', $keys[variable_get('xkcd_xml_file_random', 0)], FALSE);
+        break;
+    }
+
+    return $block;
+  }
+}
+
+function theme_xkcd_block($recent = TRUE) {
+  $url = 'http://xkcd.com/info.0.json';
+
+  $content = file_get_contents($url);
+  $obj = json_decode($content);
+
+  if ($recent == FALSE) {
+    // Retrieve a random number from 1 - recent
+    while (($rand = rand(1, $obj->num)) == 404)
+      break;
+
+    $content = file_get_contents('http://xkcd.com/' . $rand . '/info.0.json');
+    $obj = json_decode($content);
+  }
+
+  $output = '<h2>' . $obj->title . '</h2>';
+  $output .= l(theme('image', $obj->img, $obj->alt, $obj->title, NULL, FALSE), $obj->img, array('html' => TRUE));
+
+  return $output;
+}
+
+function theme_psychtoons_block($url, $recent = TRUE) {
+  $xml = simplexml_load_file($url);
+
+  if ($recent == TRUE) {
+    $latest = count($xml->cartoon) - 1;
+    $text = $xml->cartoon[$latest]->text;
+    $path = 'http://selfhelpmagazine.com/psychtoons/glasbergen/' . $xml->cartoon[$latest]->path;
+  }
+  else {
+    $random = rand(0, count($xml->cartoon) - 1);
+    $text = $xml->cartoon[$random]->text;
+    $path = 'http://selfhelpmagazine.com/psychtoons/glasbergen/' . $xml->cartoon[$random]->path;
+  }
+
+  $output = '<h2>' . $text . '</h2>';
+  $output .= l(theme('image', $path, $text, $text, NULL, FALSE), $path, array('html' => TRUE));
+
+  return $output;
+}
+
+function _xkcd_list_xml_files() {
+  return array(
+    'http://selfhelpmagazine.com/layout-files/includes/family.data.xml' => 'Family',
+    'http://selfhelpmagazine.com/layout-files/includes/happiness.data.xml' => 'Happiness',
+  );
+}

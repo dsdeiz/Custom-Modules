@@ -1,0 +1,5 @@
+name = "Iprofile"
+description = "Store IP address for each user."
+core = 6.x
+version = 6.x-1.0
+package = "Custom Modules"

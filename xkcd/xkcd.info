@@ -1,0 +1,3 @@
+name = "xkcd Recent Comic"
+description = "Retrieve latest comic from <a href=\"http://xkcd.com\">xkcd</a> using json."
+core = 6.x

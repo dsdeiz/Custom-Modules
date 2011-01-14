@@ -1,0 +1,80 @@
+<?php
+/**
+ * Implementation of hook_schema().
+ */
+function annual_reports_schema() {
+  $schema['annual_reports'] = array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'Determines whether a node is sent/draft. 0 if sent.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'sender' => array(
+        'description' => 'UID of the sender.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'recipient' => array(
+        'description' => 'UID of the recipient.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'rec_del' => array(
+        'description' => 'Status whether the recipient deletes the message.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'sender_del' => array(
+        'description' => 'Status whether the sender deletes the message either in draft or sent.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function annual_reports_install() {
+  drupal_install_schema('annual_reports');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function annual_reports_uninstall() {
+  drupal_uninstall_schema('annual_reports');
+}
+
+/**
+ * Added rec_del and sender_del which determines whether recipient or sender
+ * deletes a message in either the draft, inbox, or sent.
+ */
+function annual_reports_update_6001() {
+  $ret = array();
+  db_add_field($ret, 'annual_reports', 'rec_del', array('description' => 'Status whether the recipient deletes the message.', 'type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE));
+  db_add_field($ret, 'annual_reports', 'sender_del', array('description' => 'Status whether the sender deletes the message either in draft or sent.', 'type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE));
+  return $ret;
+}
