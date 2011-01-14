@@ -1,0 +1,6 @@
+name = "Pathauto Batch"
+description = "A simple module that creates paths using the Batch API."
+core = 6.x
+version = 6.x-1.0-Beta1
+package = "Custom Modules"
+dependencies[] = "pathauto"
